@@ -1,65 +1,95 @@
-import Image from "next/image";
+"use client"
 
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import CampaignMetrics from "./components/campaign-metrics"
+import CampaignFilters from "./components/campaign-filters"
+import CampaignTable from "./components/campaign-table"
 export default function Home() {
+   const [campaigns, setCampaigns] = useState([])
+  const [filteredCampaigns, setFilteredCampaigns] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [selectedStatus, setSelectedStatus] = useState("all")
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("https://mixo-fe-backend-task.vercel.app/campaigns")
+        if (!response.ok) throw new Error("Failed to fetch campaigns")
+        const data = await response.json()
+        setCampaigns(data.campaigns || [])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCampaigns()
+  }, [])
+
+  // Filter campaigns based on status
+  useEffect(() => {
+    if (selectedStatus === "all") {
+      setFilteredCampaigns(campaigns)
+    } else {
+      setFilteredCampaigns(campaigns.filter((c) => c.status === selectedStatus))
+    }
+  }, [campaigns, selectedStatus])
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="bg-background">
+      <div className="border-b border-border bg-card md:pt-0 pt-20">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-foreground mb-2">Campaign Monitor</h1>
+              <p className="text-muted-foreground text-lg">
+                Track and manage your advertising campaigns across all platforms
+              </p>
+            </div>
+            <Link
+              href="/insights"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              View Insights
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Metrics */}
+        {!loading && !error && <CampaignMetrics campaigns={campaigns} />}
+
+        {/* Filters */}
+        <CampaignFilters selectedStatus={selectedStatus} onStatusChange={setSelectedStatus} />
+
+        {/* Content */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="inline-block w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin mb-4" />
+              <div className="text-lg text-muted-foreground">Loading campaigns...</div>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6 border border-destructive/20">
+            <p className="font-medium">Error: {error}</p>
+          </div>
+        )}
+
+        {!loading && !error && filteredCampaigns.length === 0 && (
+          <div className="text-center py-16 bg-card border border-border rounded-lg">
+            <p className="text-muted-foreground text-lg">No campaigns found</p>
+          </div>
+        )}
+
+        {!loading && !error && filteredCampaigns.length > 0 && <CampaignTable campaigns={filteredCampaigns} />}
+      </div>
     </div>
   );
 }
